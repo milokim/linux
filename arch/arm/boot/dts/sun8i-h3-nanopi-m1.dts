@@ -70,6 +70,7 @@
 		status_led {
 			label = "nanopi-m1:blue:status";
 			gpios = <&pio 0 10 GPIO_ACTIVE_HIGH>;
+			linux,default-trigger = "heartbeat";
 		};
 
 		pwr_led {
