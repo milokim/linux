@@ -1760,7 +1760,7 @@ static const struct component_ops hdmi_component_ops = {
 	.unbind = hdmi_unbind,
 };
 
-static struct device_node *hdmi_legacy_ddc_dt_binding(struct device *dev)
+static struct device_node *hdmi_ddc_dt_binding(struct device *dev)
 {
 	const char *compatible_str = "samsung,exynos4210-hdmiddc";
 	struct device_node *np;
@@ -1769,7 +1769,13 @@ static struct device_node *hdmi_legacy_ddc_dt_binding(struct device *dev)
 	if (np)
 		return of_get_next_parent(np);
 
-	return NULL;
+	np = of_parse_phandle(dev->of_node, "ddc", 0);
+	if (!np)
+		return NULL;
+
+	of_node_put(dev->of_node);
+
+	return np;
 }
 
 static struct device_node *hdmi_legacy_phy_dt_binding(struct device *dev)
@@ -1811,18 +1817,12 @@ static int hdmi_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ddc_node = hdmi_legacy_ddc_dt_binding(dev);
-	if (ddc_node)
-		goto out_get_ddc_adpt;
-
-	ddc_node = of_parse_phandle(dev->of_node, "ddc", 0);
+	ddc_node = hdmi_ddc_dt_binding(dev);
 	if (!ddc_node) {
 		DRM_ERROR("Failed to find ddc node in device tree\n");
 		return -ENODEV;
 	}
-	of_node_put(dev->of_node);
 
-out_get_ddc_adpt:
 	hdata->ddc_adpt = of_find_i2c_adapter_by_node(ddc_node);
 	if (!hdata->ddc_adpt) {
 		DRM_ERROR("Failed to get ddc i2c adapter by node\n");
