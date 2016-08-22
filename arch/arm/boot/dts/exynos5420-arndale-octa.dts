@@ -70,6 +70,23 @@
 	status = "disabled";
 };
 
+&i2c_2 {
+	samsung,i2c-slave-addr = <0x50>;
+	status = "okay";
+
+	hdmiddc@50 {
+		compatible = "samsung,exynos4210-hdmiddc";
+		reg = <0x50>;
+	};
+};
+
+&hdmi {
+	hpd-gpios = <&gpx3 7 GPIO_OPEN_SOURCE>;
+	vdd_osc-supply = <&ldo7_reg>;
+	vdd_pll-supply = <&ldo6_reg>;
+	status = "okay";
+};
+
 &hsi2c_4 {
 	status = "okay";
 
