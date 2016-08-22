@@ -1778,11 +1778,22 @@ static struct device_node *hdmi_ddc_dt_binding(struct device *dev)
 	return np;
 }
 
-static struct device_node *hdmi_legacy_phy_dt_binding(struct device *dev)
+static struct device_node *hdmi_phy_dt_binding(struct device *dev)
 {
 	const char *compatible_str = "samsung,exynos4212-hdmiphy";
+	struct device_node *np;
 
-	return of_find_compatible_node(NULL, NULL, compatible_str);
+	np = of_find_compatible_node(NULL, NULL, compatible_str);
+	if (np)
+		return np;
+
+	np = of_parse_phandle(dev->of_node, "phy", 0);
+	if (!np)
+		return NULL;
+
+	of_node_put(dev->of_node);
+
+	return np;
 }
 
 static int hdmi_probe(struct platform_device *pdev)
@@ -1829,19 +1840,13 @@ static int hdmi_probe(struct platform_device *pdev)
 		return -EPROBE_DEFER;
 	}
 
-	phy_node = hdmi_legacy_phy_dt_binding(dev);
-	if (phy_node)
-		goto out_get_phy_port;
-
-	phy_node = of_parse_phandle(dev->of_node, "phy", 0);
+	phy_node = hdmi_phy_dt_binding(dev);
 	if (!phy_node) {
 		DRM_ERROR("Failed to find hdmiphy node in device tree\n");
 		ret = -ENODEV;
 		goto err_ddc;
 	}
-	of_node_put(dev->of_node);
 
-out_get_phy_port:
 	if (hdata->drv_data->is_apb_phy) {
 		hdata->regs_hdmiphy = of_iomap(phy_node, 0);
 		if (!hdata->regs_hdmiphy) {
