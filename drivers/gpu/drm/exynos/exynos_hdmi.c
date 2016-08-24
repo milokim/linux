@@ -1760,22 +1760,33 @@ static const struct component_ops hdmi_component_ops = {
 	.unbind = hdmi_unbind,
 };
 
-static struct device_node *hdmi_ddc_dt_binding(struct device *dev)
+static int hdmi_get_ddc_adapter(struct hdmi_context *hdata)
 {
 	const char *compatible_str = "samsung,exynos4210-hdmiddc";
+	struct device_node *of_node = hdata->dev->of_node;
 	struct device_node *np;
+	struct i2c_adapter *adpt;
 
 	np = of_find_compatible_node(NULL, NULL, compatible_str);
 	if (np)
-		return of_get_next_parent(np);
+		np = of_get_next_parent(np);
+	else
+		np = of_parse_phandle(of_node, "ddc", 0);
 
-	np = of_parse_phandle(dev->of_node, "ddc", 0);
 	if (!np)
-		return NULL;
+		return -ENODEV;
 
-	of_node_put(dev->of_node);
+	adpt = of_find_i2c_adapter_by_node(np);
+	if (!adpt) {
+		DRM_ERROR("Failed to get ddc i2c adapter by node\n");
+		of_node_put(np);
+		return -EPROBE_DEFER;
+	}
 
-	return np;
+	hdata->ddc_adpt = adpt;
+	of_node_put(np);
+
+	return 0;
 }
 
 static struct device_node *hdmi_phy_dt_binding(struct device *dev)
@@ -1798,7 +1809,7 @@ static struct device_node *hdmi_phy_dt_binding(struct device *dev)
 
 static int hdmi_probe(struct platform_device *pdev)
 {
-	struct device_node *ddc_node, *phy_node;
+	struct device_node *phy_node;
 	struct device *dev = &pdev->dev;
 	struct hdmi_context *hdata;
 	struct resource *res;
@@ -1828,16 +1839,10 @@ static int hdmi_probe(struct platform_device *pdev)
 		return ret;
 	}
 
-	ddc_node = hdmi_ddc_dt_binding(dev);
-	if (!ddc_node) {
+	ret = hdmi_get_ddc_adapter(hdata);
+	if (ret) {
 		DRM_ERROR("Failed to find ddc node in device tree\n");
-		return -ENODEV;
-	}
-
-	hdata->ddc_adpt = of_find_i2c_adapter_by_node(ddc_node);
-	if (!hdata->ddc_adpt) {
-		DRM_ERROR("Failed to get ddc i2c adapter by node\n");
-		return -EPROBE_DEFER;
+		return ret;
 	}
 
 	phy_node = hdmi_phy_dt_binding(dev);
