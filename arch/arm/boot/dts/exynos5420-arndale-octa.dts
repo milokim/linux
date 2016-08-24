@@ -74,6 +74,7 @@
 	hpd-gpios = <&gpx3 7 GPIO_OPEN_SOURCE>;
 	vdd_osc-supply = <&ldo7_reg>;
 	vdd_pll-supply = <&ldo6_reg>;
+	vdd-supply = <&ldo6_reg>;
 	ddc = <&i2c_2>;
 	status = "okay";
 };
